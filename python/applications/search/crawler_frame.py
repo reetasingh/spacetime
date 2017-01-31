@@ -24,7 +24,7 @@ MAX_LINKS_TO_DOWNLOAD = 20
 @Producer(ProducedLink)
 @GetterSetter(OneUnProcessedGroup)
 class CrawlerFrame(IApplication):
-
+# checking push
     def __init__(self, frame):
         self.starttime = time()
         # Set app_id <student_id1>_<student_id2>...
