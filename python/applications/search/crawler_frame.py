@@ -86,6 +86,9 @@ def extract_next_links(rawDatas):
 
     Suggested library: lxml
     '''
+    for data in rawDatas:
+        print data[1]
+
     return outputLinks
 
 def is_valid(url):

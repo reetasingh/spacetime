@@ -1,0 +1,34 @@
+>>> print lxml.html.tostring(html)
+<html>
+<body>
+<a href="theotherpage.html">The Link</a>
+</body>
+</html>
+>>> print(lxml.iterlinks())
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+AttributeError: 'module' object has no attribute 'iterlinks'
+>>> print(html.iterlinks())
+<generator object iterlinks at 0x000000000267EE58>
+>>> for i in hmtl.iterlinks()
+  File "<stdin>", line 1
+    for i in hmtl.iterlinks()
+                            ^
+SyntaxError: invalid syntax
+>>> for i in hmtl.iterlinks():
+... print i
+  File "<stdin>", line 2
+    print i
+        ^
+IndentationError: expected an indented block
+>>> for i in hmtl.iterlinks():
+...     print(i)
+...
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+NameError: name 'hmtl' is not defined
+>>> for i in html.iterlinks():
+...  print(i)
+...
+(<Element a at 0x2cef6d0>, 'href', 'theotherpage.html', 0)
+>>>

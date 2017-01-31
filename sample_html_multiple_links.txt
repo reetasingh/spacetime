@@ -1,0 +1,7 @@
+<html>
+<BODY>
+...some text...
+<P>You'll find a lot more in  <A href="chapter2.html">chapter two</A>. 
+See also this <A href="../images/forest.gif">map of the enchanted forest.</A>
+</BODY>
+</html>
