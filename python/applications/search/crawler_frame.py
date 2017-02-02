@@ -92,17 +92,27 @@ def extract_next_links(rawDatas):
     '''
     for data in rawDatas:
          print data[0], " main url"
-         parent_url = str(data[0])
-         temp_url_list = []
-         html = lxml.html.fromstring(data[1])
-         for link in html.iterlinks():
-             print (link)
-             sub_url = (link[2])
-             parent_url_parsed= urlparse(parent_url)
-             sub_url_parsed = urlparse(sub_url)
-             new_url = urljoin(parent_url_parsed.geturl(), sub_url_parsed.geturl())
-             temp_url_list.append(new_url)
-         outputLinks.extend(temp_url_list)
+         try:
+             parent_url = str(data[0])
+             temp_url_list = []
+             try:
+                 html = lxml.html.fromstring(data[1])
+             except:
+                 continue
+
+             for link in html.iterlinks():
+                 try:
+                     print (link)
+                     sub_url = (link[2])
+                     parent_url_parsed= urlparse(parent_url)
+                     sub_url_parsed = urlparse(sub_url)
+                     new_url = urljoin(parent_url_parsed.geturl(), sub_url_parsed.geturl())
+                     temp_url_list.append(new_url)
+                 except:
+                     continue
+             outputLinks.extend(temp_url_list)
+         except:
+             continue
 
     print "added ", len(outputLinks)
     return outputLinks
