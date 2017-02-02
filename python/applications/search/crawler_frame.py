@@ -5,10 +5,12 @@ from spacetime_local.declarations import Producer, GetterSetter, Getter
 from lxml import html,etree
 import re, os
 from time import time
+import lxml.html
+
 
 try:
     # For python 2
-    from urlparse import urlparse, parse_qs
+    from urlparse import urlparse, parse_qs,urljoin
 except ImportError:
     # For python 3
     from urllib.parse import urlparse, parse_qs
@@ -19,7 +21,7 @@ LOG_HEADER = "[CRAWLER]"
 url_count = 0 if not os.path.exists("successful_urls.txt") else (len(open("successful_urls.txt").readlines()) - 1)
 if url_count < 0:
     url_count = 0
-MAX_LINKS_TO_DOWNLOAD = 20
+MAX_LINKS_TO_DOWNLOAD = 100
 
 @Producer(ProducedLink)
 @GetterSetter(OneUnProcessedGroup)
@@ -46,6 +48,7 @@ class CrawlerFrame(IApplication):
         self.frame.add(l)
 
     def update(self):
+        print len(self.frame.get(OneUnProcessedGroup))
         for g in self.frame.get(OneUnProcessedGroup):
             print "Got a Group"
             outputLinks = process_url_group(g, self.UserAgentString)
@@ -61,6 +64,7 @@ class CrawlerFrame(IApplication):
         pass
 
 def save_count(urls):
+    print "save count"
     global url_count
     url_count += len(urls)
     with open("successful_urls.txt", "a") as surls:
@@ -87,8 +91,20 @@ def extract_next_links(rawDatas):
     Suggested library: lxml
     '''
     for data in rawDatas:
-        print data[1]
+         print data[0], " main url"
+         parent_url = str(data[0])
+         temp_url_list = []
+         html = lxml.html.fromstring(data[1])
+         for link in html.iterlinks():
+             print (link)
+             sub_url = (link[2])
+             parent_url_parsed= urlparse(parent_url)
+             sub_url_parsed = urlparse(sub_url)
+             new_url = urljoin(parent_url_parsed.geturl(), sub_url_parsed.geturl())
+             temp_url_list.append(new_url)
+         outputLinks.extend(temp_url_list)
 
+    print "added ", len(outputLinks)
     return outputLinks
 
 def is_valid(url):
