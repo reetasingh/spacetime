@@ -6,7 +6,7 @@ from lxml import html,etree
 import re, os
 from time import time
 import lxml.html
-
+import requests
 
 try:
     # For python 2
@@ -21,7 +21,7 @@ LOG_HEADER = "[CRAWLER]"
 url_count = 0 if not os.path.exists("successful_urls.txt") else (len(open("successful_urls.txt").readlines()) - 1)
 if url_count < 0:
     url_count = 0
-MAX_LINKS_TO_DOWNLOAD = 100
+MAX_LINKS_TO_DOWNLOAD = 1000
 
 @Producer(ProducedLink)
 @GetterSetter(OneUnProcessedGroup)
@@ -91,7 +91,7 @@ def extract_next_links(rawDatas):
     Suggested library: lxml
     '''
     for data in rawDatas:
-         print data[0], " main url"
+         # print data[0], " main url"
          try:
              parent_url = str(data[0])
              temp_url_list = []
@@ -102,12 +102,13 @@ def extract_next_links(rawDatas):
 
              for link in html.iterlinks():
                  try:
-                     print (link)
+                     # print (link)
                      sub_url = (link[2])
                      parent_url_parsed= urlparse(parent_url)
                      sub_url_parsed = urlparse(sub_url)
                      new_url = urljoin(parent_url_parsed.geturl(), sub_url_parsed.geturl())
                      temp_url_list.append(new_url)
+                     print(new_url)
                  except:
                      continue
              outputLinks.extend(temp_url_list)
@@ -124,9 +125,23 @@ def is_valid(url):
 
     This is a great place to filter out crawler traps.
     '''
-    parsed = urlparse(url)
-    if parsed.scheme not in set(["http", "https"]):
+
+    # Whether page can be opened on web or not and protocol is valid
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme not in set(["http", "https"]):
+            return False
+
+        request = requests.get(str(url))
+        if request.status_code == 200:
+            print('Web site exists')
+        else:
+            print('Web site does not exist')
+            return False
+    except:
         return False
+
+
     try:
         return ".ics.uci.edu" in parsed.hostname \
             and not re.match(".*\.(css|js|bmp|gif|jpe?g|ico" + "|png|tiff?|mid|mp2|mp3|mp4"\
