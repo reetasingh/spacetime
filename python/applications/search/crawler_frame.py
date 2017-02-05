@@ -7,6 +7,7 @@ import re, os
 from time import time
 import lxml.html
 import requests
+from time import gmtime, strftime
 
 try:
     # For python 2
@@ -21,7 +22,7 @@ LOG_HEADER = "[CRAWLER]"
 url_count = 0 if not os.path.exists("successful_urls.txt") else (len(open("successful_urls.txt").readlines()) - 1)
 if url_count < 0:
     url_count = 0
-MAX_LINKS_TO_DOWNLOAD = 1000
+MAX_LINKS_TO_DOWNLOAD = 10
 
 @Producer(ProducedLink)
 @GetterSetter(OneUnProcessedGroup)
@@ -94,29 +95,67 @@ def extract_next_links(rawDatas):
          # print data[0], " main url"
          try:
              parent_url = str(data[0])
-             temp_url_list = []
-             try:
-                 html = lxml.html.fromstring(data[1])
-             except:
+             generated = open("generated_urls.txt", "a")
+             generated.write("[" + strftime('%X %x %Z') +"]" + parent_url + "\n")
+             # check if valid url recieved from frontier
+             if (is_valid(parent_url) == True):
+                temp_url_list = []
+                try:
+                        if data[1] != None:
+                            if (len(data[1]) > 0):
+                                #TODO - what if html is malformed?
+                                #TODO - what if links are dynamic scripts?
+                                html = lxml.html.fromstring(data[1])
+                            else:
+                                generated.write("[" + strftime('%X %x %Z') + "]" + " Encountered URL with no page" + "\n")
+                                continue
+                        else:
+                            generated.write("[" + strftime('%X %x %Z') + "]" + " Encountered URL with rawdata null" + "\n")
+                            continue
+                except Exception as e:
+                    generated.write("[" + strftime('%X %x %Z') + "]" + " Encountered exception in parsing URL " + str(e) + "\n")
+                    continue
+
+                for link in html.iterlinks():
+                     try:
+                        sub_url = (link[2])
+                        parent_url_parsed= urlparse(parent_url)
+                        sub_url_parsed = urlparse(sub_url)
+                        new_url = urljoin(parent_url_parsed.geturl(), sub_url_parsed.geturl())
+                        generated.write("   " + "original link" + "[" + strftime('%X %x %Z') + "]" + sub_url_parsed.geturl() + "\n")
+                        generated.write("   " + "[" + strftime('%X %x %Z') +"]" + new_url + "\n")
+                        temp_url_list.append(new_url)
+                        print(new_url)
+                     except Exception as c:
+                         generated.write("[" + strftime('%X %x %Z') + "]" + " Encountered exception in parsing link " + str(c) + "\n")
+                         continue
+
+                outputLinks.extend(temp_url_list)
+             # else log the invalid url and move ahead
+             else:
+                 generated.write("[" + strftime('%X %x %Z') + "]" +" Encountered invalid URL" + "\n")
+                 log_invalid_url(parent_url)
                  continue
-
-             for link in html.iterlinks():
-                 try:
-                     # print (link)
-                     sub_url = (link[2])
-                     parent_url_parsed= urlparse(parent_url)
-                     sub_url_parsed = urlparse(sub_url)
-                     new_url = urljoin(parent_url_parsed.geturl(), sub_url_parsed.geturl())
-                     temp_url_list.append(new_url)
-                     print(new_url)
-                 except:
-                     continue
-             outputLinks.extend(temp_url_list)
-         except:
+         except Exception as e:
+             generated.write("[" + strftime('%X %x %Z') + "]" + " Encountered exception" + str(e) + "\n")
              continue
-
-    print "added ", len(outputLinks)
     return outputLinks
+
+# LOG INVALID URL RECEIVED FROM FRONTIER
+def log_invalid_url(url):
+        with open("invalid_urls.txt", "a") as invalid_url:
+            invalid_url.write("\n".join(url) + "\n")
+            invalid_url.close()
+
+# GET THE COUNT OF INVALID URL RECEIVED FROM FRONTIER
+def count_invalid_url():
+    with open("invalid_urls.txt", "r") as invalidurl:
+        s= set()
+        for i in invalidurl:
+            s.add(i)
+    invalidurl.close()
+    return len(s)
+
 
 def is_valid(url):
     '''
@@ -131,16 +170,13 @@ def is_valid(url):
         parsed = urlparse(url)
         if parsed.scheme not in set(["http", "https"]):
             return False
-
+        #TODO - it is possible that website is not up now and url is valid
+        #TODO- in that case this method does not help
         request = requests.get(str(url))
-        if request.status_code == 200:
-            print('Web site exists')
-        else:
-            print('Web site does not exist')
+        if request.status_code != 200:
             return False
     except:
         return False
-
 
     try:
         return ".ics.uci.edu" in parsed.hostname \
@@ -148,7 +184,8 @@ def is_valid(url):
             + "|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf" \
             + "|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso|epub|dll|cnf|tgz|sha1" \
             + "|thmx|mso|arff|rtf|jar|csv"\
-            + "|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower())
+            + "|rm|smil|wmv|swf|wma|zip|rar|gz|java)$", parsed.path.lower())
 
     except TypeError:
         print ("TypeError for ", parsed)
+
