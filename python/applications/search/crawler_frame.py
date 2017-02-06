@@ -62,6 +62,8 @@ class CrawlerFrame(IApplication):
 
     def shutdown(self):
         print "downloaded ", url_count, " in ", time() - self.starttime, " seconds."
+		print "writing data in analytics file"	
+		analytics()
         pass
 
 def save_count(urls):
@@ -131,6 +133,8 @@ def extract_next_links(rawDatas):
                          continue
 
                 outputLinks.extend(temp_url_list)
+				log_url_count(parent_url, len(temp_url_list))
+				
              # else log the invalid url and move ahead
              else:
                  generated.write("[" + strftime('%X %x %Z') + "]" +" Encountered invalid URL" + "\n")
@@ -150,12 +154,49 @@ def log_invalid_url(url):
 # GET THE COUNT OF INVALID URL RECEIVED FROM FRONTIER
 def count_invalid_url():
     with open("invalid_urls.txt", "r") as invalidurl:
-        s= set()
+        s= []
         for i in invalidurl:
-            s.add(i)
+            s.append(i)
     invalidurl.close()
     return len(s)
 
+# LOG URL, NUMBER OF LINKS EXTRACTED FOR VALID URL RECIEVED FORM FRONTIER	
+def log_url_count(url, count):
+    with open("url_count.txt", "a") as url_count:
+        url_count.write(url + "," + count + "\n")
+        url_count.close()
+
+		
+# GET URL HAVING MAXIMUM OUTBOUND LINKS
+def get_url_with_max_outbound():
+	url_dict = {}
+	with open("url_count.txt", "r") as url_count:
+		for line in url_count:
+			url_list = line.split(',')
+			if (url_list[0] in url_dict):
+				if (url_dict[url_list[0]] > url_list[1]):
+					url_dict[url_list[0]] = url_list[1]
+				else:
+					continue
+			else:
+				url_dict[url_list[0]] = url_list[1]
+		url_key = None
+		url_count = None
+		for key, value in sorted(url_dict.items(), key=lambda x:x[1],reverse = True):
+			url_key = key
+			url_count = value
+			break
+		return url_key, url_count
+	
+	
+# ANALYTICS METHOD FOR CRAWALER				
+def analytics():
+	with open("analytics.txt", "w") as analytics_file:
+		url_key, url_count = get_url_with_max_outbound()
+		analytics_file.write("\nURL with max outbound links: " + url_key + ", Number of outbound links: " + url_count)
+		invalid_url_count = count_invalid_url()
+		analytics_file.write("\nCount of invalid links recieved: " + invalid_url_count)
+		
 
 def is_valid(url):
     '''
