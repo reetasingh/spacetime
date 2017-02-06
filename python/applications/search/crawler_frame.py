@@ -8,6 +8,8 @@ from time import time
 import lxml.html
 import requests
 from time import gmtime, strftime
+import hashlib
+import os
 
 try:
     # For python 2
@@ -22,7 +24,7 @@ LOG_HEADER = "[CRAWLER]"
 url_count = 0 if not os.path.exists("successful_urls.txt") else (len(open("successful_urls.txt").readlines()) - 1)
 if url_count < 0:
     url_count = 0
-MAX_LINKS_TO_DOWNLOAD = 10
+MAX_LINKS_TO_DOWNLOAD = 100
 
 @Producer(ProducedLink)
 @GetterSetter(OneUnProcessedGroup)
@@ -80,6 +82,34 @@ def process_url_group(group, useragentstr):
 '''
 STUB FUNCTIONS TO BE FILLED OUT BY THE STUDENT.
 '''
+
+#CHECK HASH OF PAGE AND IF HASH ALREADY EXISTS (DIRECTED TO SAME PAGE) RETURN FALSE
+def compute_checksum(data):
+    # url and content in data
+    hashes=dict()
+    hash=hashlib.sha224(data[1]).hexdigest()
+
+    if os.path.isfile("hash.txt"):
+        with open("hash.txt", 'r') as f:
+            for line in f:
+                items = line.split(",")
+                key, values = items[0], items[1:]
+                hashes[key] = values
+        f.close()
+    if os.path.isfile("hash.txt"):
+        for url,hashcode in hashes.iteritems():
+            if hashcode==hash:
+                with open("failed_hashes.txt","a") as ft:
+                    ft.write(data[0]+"\n")
+                return False
+    hashes[data[0]]=hash
+    with open("hashes.txt", "a") as myfile:
+        myfile.write(data[0]+","+hash+"\n")
+        myfile.close()
+    print hashes
+    return True
+    # print "***************",hashes
+
 def extract_next_links(rawDatas):
     outputLinks = list()
     '''
@@ -94,11 +124,17 @@ def extract_next_links(rawDatas):
     for data in rawDatas:
          # print data[0], " main url"
          try:
+             print data[0]
+             # compute_checksum(data)
              parent_url = str(data[0])
              generated = open("generated_urls.txt", "a")
              generated.write("[" + strftime('%X %x %Z') +"]" + parent_url + "\n")
              # check if valid url recieved from frontier
+
              if (is_valid(parent_url) == True):
+                if compute_checksum(data)==False:
+                    continue
+
                 temp_url_list = []
                 try:
                         if data[1] != None:
@@ -125,7 +161,7 @@ def extract_next_links(rawDatas):
                         generated.write("   " + "original link" + "[" + strftime('%X %x %Z') + "]" + sub_url_parsed.geturl() + "\n")
                         generated.write("   " + "[" + strftime('%X %x %Z') +"]" + new_url + "\n")
                         temp_url_list.append(new_url)
-                        print(new_url)
+                        # print(new_url)
                      except Exception as c:
                          generated.write("[" + strftime('%X %x %Z') + "]" + " Encountered exception in parsing link " + str(c) + "\n")
                          continue
@@ -168,13 +204,23 @@ def is_valid(url):
     # Whether page can be opened on web or not and protocol is valid
     try:
         parsed = urlparse(url)
+        # check for the right protocol
         if parsed.scheme not in set(["http", "https"]):
             return False
-        #TODO - it is possible that website is not up now and url is valid
-        #TODO- in that case this method does not help
-        request = requests.get(str(url))
-        if request.status_code != 200:
+        # check whether the url is absolute or not- misses //
+        x = bool(parsed.netloc)
+        if (x == 0):
             return False
+        # check for relative path
+        s="../"
+        if s in url:
+            return False
+        # check for space
+        if " " in url:
+            return False
+        # request = requests.get(str(url))
+        # if request.status_code != 200:
+        #     return False
     except:
         return False
 
@@ -185,7 +231,9 @@ def is_valid(url):
             + "|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso|epub|dll|cnf|tgz|sha1" \
             + "|thmx|mso|arff|rtf|jar|csv"\
             + "|rm|smil|wmv|swf|wma|zip|rar|gz|java)$", parsed.path.lower())
-
     except TypeError:
         print ("TypeError for ", parsed)
 
+
+
+    return True
