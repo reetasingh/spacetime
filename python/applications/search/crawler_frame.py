@@ -26,6 +26,7 @@ if url_count < 0:
     url_count = 0
 MAX_LINKS_TO_DOWNLOAD = 12
 hashes = dict()
+traps = []
 
 
 @Producer(ProducedLink)
@@ -41,6 +42,7 @@ class CrawlerFrame(IApplication):
         self.UserAgentString = "IR W17 Grad 18164476, 74047877"
 
         read_hash()
+		read_cralwer_trap()
 
         self.frame = frame
         assert(self.UserAgentString != None)
@@ -93,8 +95,8 @@ def process_url_group(group, useragentstr):
 STUB FUNCTIONS TO BE FILLED OUT BY THE STUDENT.
 '''
 
+# METHOD TO READ URL,HASH VALUE OF URLS THE CRAWLWER RECEIVED
 def read_hash():
-    print "read_hash"
     if os.path.isfile("hash.txt"):
         with open("hash.txt", 'r') as f:
             for line in f:
@@ -106,8 +108,8 @@ def read_hash():
                 # print hashes
         f.close()
 
+# METHOD TO WRITE THE CONTENTS OF HASH ON THE FILE		
 def write_hash():
-    print "write_hash"
     with open("hash.txt", "w") as myfile:
         for url,hashcode in hashes.iteritems():
             myfile.write(url+","+hashcode+"\n")
@@ -156,8 +158,8 @@ def extract_next_links(rawDatas):
 
              if (is_valid(parent_url) == True):
                 if compute_checksum(data)==False:
+					generated.write("[" + strftime('%X %x %Z') + "]" + "Check sum failed. Page already crawled" + "\n")
                     continue
-
 
                 try:
                         if data[1] != None:
@@ -167,9 +169,11 @@ def extract_next_links(rawDatas):
                                 html = lxml.html.fromstring(data[1])
                             else:
                                 generated.write("[" + strftime('%X %x %Z') + "]" + " Encountered URL with no page" + "\n")
+								log_invalid_url(parent_url)
                                 continue
                         else:
                             generated.write("[" + strftime('%X %x %Z') + "]" + " Encountered URL with rawdata null" + "\n")
+							log_invalid_url(parent_url)
                             continue
                 except Exception as e:
                     generated.write("[" + strftime('%X %x %Z') + "]" + " Encountered exception in parsing URL " + str(e) + "\n")
@@ -198,7 +202,8 @@ def extract_next_links(rawDatas):
                  log_invalid_url(parent_url)
                  continue
          except Exception as e:
-             generated.write("[" + strftime('%X %x %Z') + "]" + " Encountered exception" + str(e) + "\n")
+			 log_invalid_url(parent_url)
+             generated.write("[" + strftime('%X %x %Z') + "]" + " Encountered exception in parsing main url" + str(e) + "\n")
              continue
     return outputLinks
 
@@ -233,22 +238,23 @@ def log_url_count(url, count):
 def get_url_with_max_outbound():
     max_count =-1;
     max_url = None
-    with open("url_count.txt", "r") as url_count:
-        for line in url_count:
-            url_list=line.split(',')
-            url = url_list[0]
-            count = int(url_list[1])
-            if count > max_count:
-                max_count = count
-                max_url = url
-		return max_url, max_count
+	if os.path.isfile("invalid_urls.txt"):
+		with open("url_count.txt", "r") as url_count:
+			for line in url_count:
+				url_list=line.split(',')
+				url = url_list[0]
+				count = int(url_list[1])
+				if count > max_count:
+					max_count = count
+					max_url = url
+			return max_url, max_count
 	
 	
 # ANALYTICS METHOD FOR CRAWALER				
 def analytics():
 	with open("analytics.txt", "w") as analytics_file:
 		url_key, url_count = get_url_with_max_outbound()
-		analytics_file.write("\nURL with max outbound links: " + str(url_key) + ", Number of outbound links: " + str(url_count))
+		analytics_file.write("\nURL with max outbound links: " + str(url_key) + "  	, Number of outbound links: " + str(url_count))
 		invalid_url_count = count_invalid_url()
 		analytics_file.write("\nCount of invalid links recieved: " + str(invalid_url_count))
 		
@@ -275,9 +281,15 @@ def is_valid(url):
         # check for space
         if " " in url:
             return False
-        # request = requests.get(str(url))
-        # if request.status_code != 200:
-        #     return False
+		
+		#check for cralwer trap
+		# this will check if url is part of our database of traps
+		# this is improved based on our observation of links crawled
+		for url_trap in traps:
+			if (parsed.scheme == url_trap.scheme and parsed.netloc == url_trap.netloc and parsed.path == url_trap.path):
+				return False
+				break
+		
     except Exception as e:
         print e
         return False
@@ -291,3 +303,19 @@ def is_valid(url):
             + "|rm|smil|wmv|swf|wma|zip|rar|gz|java)$", parsed.path.lower())
     except TypeError:
         print ("TypeError for ", parsed)
+
+		
+#METHOD TO READ LINES FROM TRAP FILE
+def read_cralwer_trap():
+	if os.path.isfile("traps_url.txt"):
+		with open("trap_url.txt", "r") as trap:
+			for line in trap:
+				url = line
+				try:
+					url_parse = urlparse(url)
+					traps.append(url_parse)
+				except :
+					continue
+		
+		
+	
