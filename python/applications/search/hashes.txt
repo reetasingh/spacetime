@@ -1,2 +1,0 @@
-http://ganglia.ics.uci.edu/graph_all_periods.php?c=cacofonix&h=cacofonix-2.ics.uci.edu&r=hour&z=large&jr=&js=&st=1486426745&v=0.05&m=load_fifteen&vl=%20&ti=Fifteen%20Minute%20Load%20Average&z=large,eaf23dc96999047d96a1ba18c874ab606c5e8b42cde4246a82cd9f93
-http://ganglia.ics.uci.edu/graph_all_periods.php?c=cacofonix&h=cacofonix-2.ics.uci.edu&r=hour&z=large&jr=&js=&st=1486426745&v=12.17&m=pkts_out&vl=packets%2Fsec&ti=Packets%20Sent&z=large,e3ef45124cbf206d622c9b6c8b0b4b79a80510e80c4912b18e02578f

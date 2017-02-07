@@ -24,7 +24,9 @@ LOG_HEADER = "[CRAWLER]"
 url_count = 0 if not os.path.exists("successful_urls.txt") else (len(open("successful_urls.txt").readlines()) - 1)
 if url_count < 0:
     url_count = 0
-MAX_LINKS_TO_DOWNLOAD = 2
+MAX_LINKS_TO_DOWNLOAD = 12
+hashes = dict()
+
 
 @Producer(ProducedLink)
 @GetterSetter(OneUnProcessedGroup)
@@ -38,17 +40,22 @@ class CrawlerFrame(IApplication):
         # If Graduate studetn, change the UnderGrad part to Grad.
         self.UserAgentString = "IR W17 Grad 18164476, 74047877"
 
+        read_hash()
+
         self.frame = frame
         assert(self.UserAgentString != None)
         assert(self.app_id != "")
         if url_count >= MAX_LINKS_TO_DOWNLOAD:
             self.done = True
 
+
+
     def initialize(self):
         self.count = 0
         l = ProducedLink("http://www.ics.uci.edu", self.UserAgentString)
         print l.full_url
         self.frame.add(l)
+
 
     def update(self):
         print len(self.frame.get(OneUnProcessedGroup))
@@ -66,6 +73,7 @@ class CrawlerFrame(IApplication):
         print "downloaded ", url_count, " in ", time() - self.starttime, " seconds."
         print "writing data in analytics file"
         analytics()
+        write_hash()
         pass
 
 def save_count(urls):
@@ -85,30 +93,43 @@ def process_url_group(group, useragentstr):
 STUB FUNCTIONS TO BE FILLED OUT BY THE STUDENT.
 '''
 
-#CHECK HASH OF PAGE AND IF HASH ALREADY EXISTS (DIRECTED TO SAME PAGE) RETURN FALSE
-def compute_checksum(data):
-    # url and content in data
-    hashes=dict()
-    hash=hashlib.sha224(data[1]).hexdigest()
-
+def read_hash():
+    print "read_hash"
     if os.path.isfile("hash.txt"):
         with open("hash.txt", 'r') as f:
             for line in f:
+                # print "in"
                 items = line.split(",")
-                key, values = items[0], items[1:]
-                hashes[key] = values
+                key, values = items[0], items[1]
+                # print "####",key,values
+                hashes[key] = values.strip('\n')
+                # print hashes
         f.close()
+
+def write_hash():
+    print "write_hash"
+    with open("hash.txt", "w") as myfile:
+        for url,hashcode in hashes.iteritems():
+            myfile.write(url+","+hashcode+"\n")
+    myfile.close()
+
+
+#CHECK HASH OF PAGE AND IF HASH ALREADY EXISTS (DIRECTED TO SAME PAGE) RETURN FALSE
+def compute_checksum(data):
+    # url and content in data
+    # hashes=dict()
+    hash=hashlib.sha224(data[1]).hexdigest()
     if os.path.isfile("hash.txt"):
         for url,hashcode in hashes.iteritems():
             if hashcode==hash:
-                with open("failed_hashes.txt","a") as ft:
-                    ft.write(data[0]+"\n")
+                with open("failed_hash.txt","a") as ft:
+                    ft.write(data[0]+","+hashcode+"\n")
                 return False
     hashes[data[0]]=hash
-    with open("hashes.txt", "a") as myfile:
-        myfile.write(data[0]+","+hash+"\n")
-        myfile.close()
-    print hashes
+    # with open("hash.txt", "a") as myfile:
+    #     myfile.write(data[0]+","+hash+"\n")
+    #     myfile.close()
+    # print hashes
     return True
     # print "***************",hashes
 
@@ -202,9 +223,7 @@ def count_invalid_url():
 def log_url_count(url, count):
     if count == None:
         count = 0
-    print "****",url,count
     with open("url_count.txt", "a") as url_count:
-        # url_count.write("ancd")
         a=str(str(url)+","+str(count)+'\n')
         url_count.write(a)
         url_count.close()
@@ -212,26 +231,17 @@ def log_url_count(url, count):
 
 # GET URL HAVING MAXIMUM OUTBOUND LINKS
 def get_url_with_max_outbound():
-    url_dict = {}
+    max_count =-1;
+    max_url = None
     with open("url_count.txt", "r") as url_count:
         for line in url_count:
             url_list=line.split(',')
             url = url_list[0]
             count = int(url_list[1])
-            if url in url_dict:
-                if (url_dict[url] > count):
-                    url_dict[url] = count
-                else:
-                    continue
-            else:
-                url_dict[url] = count
-		url_key = None
-		url_count = None
-		for key, value in sorted(url_dict.items(), key=lambda x:x[1],reverse = True):
-			url_key = key
-			url_count = value
-			break
-		return url_key, url_count
+            if count > max_count:
+                max_count = count
+                max_url = url
+		return max_url, max_count
 	
 	
 # ANALYTICS METHOD FOR CRAWALER				
