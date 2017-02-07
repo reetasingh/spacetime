@@ -24,7 +24,7 @@ LOG_HEADER = "[CRAWLER]"
 url_count = 0 if not os.path.exists("successful_urls.txt") else (len(open("successful_urls.txt").readlines()) - 1)
 if url_count < 0:
     url_count = 0
-MAX_LINKS_TO_DOWNLOAD = 100
+MAX_LINKS_TO_DOWNLOAD = 2
 
 @Producer(ProducedLink)
 @GetterSetter(OneUnProcessedGroup)
@@ -64,8 +64,8 @@ class CrawlerFrame(IApplication):
 
     def shutdown(self):
         print "downloaded ", url_count, " in ", time() - self.starttime, " seconds."
-		print "writing data in analytics file"	
-		analytics()
+        print "writing data in analytics file"
+        analytics()
         pass
 
 def save_count(urls):
@@ -137,7 +137,7 @@ def extract_next_links(rawDatas):
                 if compute_checksum(data)==False:
                     continue
 
-                temp_url_list = []
+
                 try:
                         if data[1] != None:
                             if (len(data[1]) > 0):
@@ -153,7 +153,7 @@ def extract_next_links(rawDatas):
                 except Exception as e:
                     generated.write("[" + strftime('%X %x %Z') + "]" + " Encountered exception in parsing URL " + str(e) + "\n")
                     continue
-
+                temp_url_list = []
                 for link in html.iterlinks():
                      try:
                         sub_url = (link[2])
@@ -169,9 +169,9 @@ def extract_next_links(rawDatas):
                          continue
 
                 outputLinks.extend(temp_url_list)
-				log_url_count(parent_url, len(temp_url_list))
+                log_url_count(parent_url, len(temp_url_list))
 				
-             # else log the invalid url and move ahead
+             #else log the invalid url and move ahead
              else:
                  generated.write("[" + strftime('%X %x %Z') + "]" +" Encountered invalid URL" + "\n")
                  log_invalid_url(parent_url)
@@ -189,33 +189,42 @@ def log_invalid_url(url):
 
 # GET THE COUNT OF INVALID URL RECEIVED FROM FRONTIER
 def count_invalid_url():
-    with open("invalid_urls.txt", "r") as invalidurl:
-        s= []
-        for i in invalidurl:
-            s.append(i)
-    invalidurl.close()
-    return len(s)
+    if os.path.isfile("invalid_urls.txt"):
+        with open("invalid_urls.txt", "r") as invalidurl:
+            s= []
+            for i in invalidurl:
+                s.append(i)
+        return len(s)
+    else:
+        return 0
 
 # LOG URL, NUMBER OF LINKS EXTRACTED FOR VALID URL RECIEVED FORM FRONTIER	
 def log_url_count(url, count):
+    if count == None:
+        count = 0
+    print "****",url,count
     with open("url_count.txt", "a") as url_count:
-        url_count.write(url + "," + count + "\n")
+        # url_count.write("ancd")
+        a=str(str(url)+","+str(count)+'\n')
+        url_count.write(a)
         url_count.close()
 
-		
+
 # GET URL HAVING MAXIMUM OUTBOUND LINKS
 def get_url_with_max_outbound():
-	url_dict = {}
-	with open("url_count.txt", "r") as url_count:
-		for line in url_count:
-			url_list = line.split(',')
-			if (url_list[0] in url_dict):
-				if (url_dict[url_list[0]] > url_list[1]):
-					url_dict[url_list[0]] = url_list[1]
-				else:
-					continue
-			else:
-				url_dict[url_list[0]] = url_list[1]
+    url_dict = {}
+    with open("url_count.txt", "r") as url_count:
+        for line in url_count:
+            url_list=line.split(',')
+            url = url_list[0]
+            count = int(url_list[1])
+            if url in url_dict:
+                if (url_dict[url] > count):
+                    url_dict[url] = count
+                else:
+                    continue
+            else:
+                url_dict[url] = count
 		url_key = None
 		url_count = None
 		for key, value in sorted(url_dict.items(), key=lambda x:x[1],reverse = True):
@@ -229,9 +238,9 @@ def get_url_with_max_outbound():
 def analytics():
 	with open("analytics.txt", "w") as analytics_file:
 		url_key, url_count = get_url_with_max_outbound()
-		analytics_file.write("\nURL with max outbound links: " + url_key + ", Number of outbound links: " + url_count)
+		analytics_file.write("\nURL with max outbound links: " + str(url_key) + ", Number of outbound links: " + str(url_count))
 		invalid_url_count = count_invalid_url()
-		analytics_file.write("\nCount of invalid links recieved: " + invalid_url_count)
+		analytics_file.write("\nCount of invalid links recieved: " + str(invalid_url_count))
 		
 
 def is_valid(url):
@@ -241,20 +250,17 @@ def is_valid(url):
 
     This is a great place to filter out crawler traps.
     '''
-
-    # Whether page can be opened on web or not and protocol is valid
     try:
         parsed = urlparse(url)
         # check for the right protocol
         if parsed.scheme not in set(["http", "https"]):
             return False
         # check whether the url is absolute or not- misses //
-        x = bool(parsed.netloc)
-        if (x == 0):
+        if len(parsed.netloc) == 0:
             return False
         # check for relative path
-        s="../"
-        if s in url:
+        s="/../"
+        if "../" in url or "/../" in url or ".." in url or "/.." in url:
             return False
         # check for space
         if " " in url:
@@ -262,7 +268,8 @@ def is_valid(url):
         # request = requests.get(str(url))
         # if request.status_code != 200:
         #     return False
-    except:
+    except Exception as e:
+        print e
         return False
 
     try:
@@ -274,7 +281,3 @@ def is_valid(url):
             + "|rm|smil|wmv|swf|wma|zip|rar|gz|java)$", parsed.path.lower())
     except TypeError:
         print ("TypeError for ", parsed)
-
-
-
-    return True
