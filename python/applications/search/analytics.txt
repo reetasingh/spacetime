@@ -1,3 +1,3 @@
 
-URL with max outbound links: http://www.ics.uci.edu?p=2&c=igb-misc&h=arcus-3.ics.uci.edu/grad/degrees/index/grad/index/about/annualreport//ugrad/policies/Grade_Options/ugrad/QA_Graduation/ugrad/courses/index/ugrad/policies/Academic_Integrity/involved/leadership_council/ugrad/policies/Add_Drop_ChangeOption/about/annualreport//grad/courses/index/about/annualreport//grad/resources/grad/policies/index/ugrad/sao/index/community/news//community/events/competition//involved/corporate_partner/community/news/press//about//about/visit/index/ugrad/policies/Add_Drop_ChangeOption, Number of outbound links: 109
+ No URL's recieved
 Count of invalid links recieved: 0

@@ -10,6 +10,7 @@ import requests
 from time import gmtime, strftime
 import hashlib
 import os
+import re
 
 try:
     # For python 2
@@ -24,7 +25,7 @@ LOG_HEADER = "[CRAWLER]"
 url_count = 0 if not os.path.exists("successful_urls.txt") else (len(open("successful_urls.txt").readlines()) - 1)
 if url_count < 0:
     url_count = 0
-MAX_LINKS_TO_DOWNLOAD = 12
+MAX_LINKS_TO_DOWNLOAD = 10
 hashes = dict()
 traps = []
 
@@ -40,10 +41,8 @@ class CrawlerFrame(IApplication):
         # Set user agent string to IR W17 UnderGrad <student_id1>, <student_id2> ...
         # If Graduate studetn, change the UnderGrad part to Grad.
         self.UserAgentString = "IR W17 Grad 18164476, 74047877"
-
         read_hash()
-		read_cralwer_trap()
-
+        read_cralwer_trap()
         self.frame = frame
         assert(self.UserAgentString != None)
         assert(self.app_id != "")
@@ -86,7 +85,7 @@ def save_count(urls):
         surls.write("\n".join(urls) + "\n")
 
 def process_url_group(group, useragentstr):
-    rawDatas, successfull_urls = group.download(useragentstr, is_valid)
+    rawDatas, successfull_urls = group.download(useragentstr,is_valid)
     save_count(successfull_urls)
     return extract_next_links(rawDatas)
     
@@ -146,6 +145,7 @@ def extract_next_links(rawDatas):
 
     Suggested library: lxml
     '''
+    print "entering extract link"
     for data in rawDatas:
          # print data[0], " main url"
          try:
@@ -159,7 +159,7 @@ def extract_next_links(rawDatas):
              if (is_valid(parent_url) == True):
                 if compute_checksum(data)==False:
 					generated.write("[" + strftime('%X %x %Z') + "]" + "Check sum failed. Page already crawled" + "\n")
-                    continue
+					continue
 
                 try:
                         if data[1] != None:
@@ -168,13 +168,13 @@ def extract_next_links(rawDatas):
                                 #TODO - what if links are dynamic scripts?
                                 html = lxml.html.fromstring(data[1])
                             else:
-                                generated.write("[" + strftime('%X %x %Z') + "]" + " Encountered URL with no page" + "\n")
+								generated.write("[" + strftime('%X %x %Z') + "]" + " Encountered URL with no page" + "\n")
 								log_invalid_url(parent_url)
-                                continue
+								continue
                         else:
-                            generated.write("[" + strftime('%X %x %Z') + "]" + " Encountered URL with rawdata null" + "\n")
+							generated.write("[" + strftime('%X %x %Z') + "]" + " Encountered URL with rawdata null" + "\n")
 							log_invalid_url(parent_url)
-                            continue
+							continue
                 except Exception as e:
                     generated.write("[" + strftime('%X %x %Z') + "]" + " Encountered exception in parsing URL " + str(e) + "\n")
                     continue
@@ -198,13 +198,13 @@ def extract_next_links(rawDatas):
 				
              #else log the invalid url and move ahead
              else:
-                 generated.write("[" + strftime('%X %x %Z') + "]" +" Encountered invalid URL" + "\n")
-                 log_invalid_url(parent_url)
-                 continue
+				generated.write("[" + strftime('%X %x %Z') + "]" +" Encountered invalid URL" + "\n")
+				log_invalid_url(parent_url)
+				continue
          except Exception as e:
-			 log_invalid_url(parent_url)
-             generated.write("[" + strftime('%X %x %Z') + "]" + " Encountered exception in parsing main url" + str(e) + "\n")
-             continue
+				log_invalid_url(parent_url)
+				generated.write("[" + strftime('%X %x %Z') + "]" + " Encountered exception in parsing main url" + str(e) + "\n")
+				continue
     return outputLinks
 
 # LOG INVALID URL RECEIVED FROM FRONTIER
@@ -228,33 +228,37 @@ def count_invalid_url():
 def log_url_count(url, count):
     if count == None:
         count = 0
-    with open("url_count.txt", "a") as url_count:
+    with open("url_count.txt", "a") as url_count_file:
         a=str(str(url)+","+str(count)+'\n')
-        url_count.write(a)
-        url_count.close()
+        url_count_file.write(a)
+        url_count_file.close()
 
 
 # GET URL HAVING MAXIMUM OUTBOUND LINKS
 def get_url_with_max_outbound():
-    max_count =-1;
-    max_url = None
-	if os.path.isfile("invalid_urls.txt"):
-		with open("url_count.txt", "r") as url_count:
-			for line in url_count:
+	max_count =-1;
+	max_url = None
+	if os.path.isfile("url_count.txt"):
+		with open("url_count.txt", "r") as url_count_file:
+			for line in url_count_file:
 				url_list=line.split(',')
 				url = url_list[0]
 				count = int(url_list[1])
 				if count > max_count:
 					max_count = count
 					max_url = url
-			return max_url, max_count
+	return max_url, max_count
+	
 	
 	
 # ANALYTICS METHOD FOR CRAWALER				
 def analytics():
 	with open("analytics.txt", "w") as analytics_file:
-		url_key, url_count = get_url_with_max_outbound()
-		analytics_file.write("\nURL with max outbound links: " + str(url_key) + "  	, Number of outbound links: " + str(url_count))
+		url_key, max_url_count = get_url_with_max_outbound()
+		if(url_key is not None):
+			analytics_file.write("\nURL with max outbound links: " + str(url_key) + "  	, Number of outbound links: " + str(max_url_count))
+		else:
+			analytics_file.write("\n No URL's recieved")
 		invalid_url_count = count_invalid_url()
 		analytics_file.write("\nCount of invalid links recieved: " + str(invalid_url_count))
 		
@@ -266,6 +270,7 @@ def is_valid(url):
 
     This is a great place to filter out crawler traps.
     '''
+    print "checking isvalid"
     try:
         parsed = urlparse(url)
         # check for the right protocol
@@ -275,20 +280,30 @@ def is_valid(url):
         if len(parsed.netloc) == 0:
             return False
         # check for relative path
-        s="/../"
-        if "../" in url or "/../" in url or ".." in url or "/.." in url:
-            return False
+        
+        #if "../" in url or "/../" in url or ".." in url or "/.." in url:
+            #return False
         # check for space
         if " " in url:
+			return False
+			
+		#check if 'word\word' present in query or fragment
+		# this is in case where url normalization was not done properly
+        pattern = re.compile("\w*/\w+")
+        if pattern.match(str(parsed.query)) or pattern.match(str(parsed.fragment)):
+            return False
+			
+		# check if javascript popup
+        if "javascript:popUp(" in url:
             return False
 		
 		#check for cralwer trap
 		# this will check if url is part of our database of traps
 		# this is improved based on our observation of links crawled
-		for url_trap in traps:
-			if (parsed.scheme == url_trap.scheme and parsed.netloc == url_trap.netloc and parsed.path == url_trap.path):
-				return False
-				break
+        for url_trap in traps:
+            if (parsed.scheme == url_trap.scheme and parsed.netloc == url_trap.netloc and parsed.path == url_trap.path):
+                return False
+                break
 		
     except Exception as e:
         print e
@@ -307,15 +322,13 @@ def is_valid(url):
 		
 #METHOD TO READ LINES FROM TRAP FILE
 def read_cralwer_trap():
-	if os.path.isfile("traps_url.txt"):
-		with open("trap_url.txt", "r") as trap:
+	if os.path.isfile("trap_urls.txt"):
+		with open("trap_urls.txt", "r") as trap:
 			for line in trap:
-				url = line
+				url = line.strip("\n")
 				try:
 					url_parse = urlparse(url)
 					traps.append(url_parse)
 				except :
 					continue
-		
-		
-	
+	print traps		

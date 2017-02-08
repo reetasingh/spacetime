@@ -2,6 +2,8 @@ http://calendar.ics.uci.edu/calendar.php?type=month&calendar=1&category=&month=0
 http://ccbs.uci.edu/2012-02-07-00-50-26
 http://ccbs.uci.edu/2012-02-07-00-19-30#year=2017&month=2&day=7&view=month
 http://ganglia.ics.uci.edu/graph.php
+http://ganglia.ics.uci.edu./graph.php
 http://ganglia.ics.uci.edu/graph_all_periods.php
+http://ganglia.ics.uci.edu./graph_all_periods.php
 http://ganglia.sourceforge.net/downloads.php
 http://ganglia.ics.uci.edu./js/
